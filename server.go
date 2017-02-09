@@ -36,6 +36,7 @@ import (
 	"github.com/vulcand/oxy/forward"
 	"github.com/vulcand/oxy/roundrobin"
 	"github.com/vulcand/oxy/utils"
+	"fmt"
 )
 
 var oxyLogger = &OxyLogger{}
@@ -713,7 +714,12 @@ func (server *Server) loadConfig(configurations configs, globalConfiguration Glo
 							log.Debugf("Creating retries max attempts %d", retries)
 						}
 
+						// TODO make this configurable
 						var negroni = negroni.New()
+						probe, err := middlewares.NewProbe(fmt.Sprintf("/tmp/probe-%s", frontend.Backend), true)
+						if err == nil {
+							negroni.Use(probe)
+						}
 						if server.globalConfiguration.Web != nil && server.globalConfiguration.Web.Metrics != nil {
 							if server.globalConfiguration.Web.Metrics.Prometheus != nil {
 								metricsMiddlewareBackend := middlewares.NewMetricsWrapper(middlewares.NewPrometheus(frontend.Backend, server.globalConfiguration.Web.Metrics.Prometheus))
