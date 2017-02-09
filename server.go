@@ -745,6 +745,12 @@ func (server *Server) loadConfig(configurations configs, globalConfiguration Glo
 					if frontend.Priority > 0 {
 						newServerRoute.route.Priority(frontend.Priority)
 					}
+					if frontend.RequestHeader {
+						log.Debugf("Adding requestHeader handler to %s", frontend.Backend)
+						backends[frontend.Backend] = &middlewares.AddRequestHeader{
+							Handler: backends[frontend.Backend],
+						}
+					}
 					server.wireFrontendBackend(newServerRoute, backends[frontend.Backend])
 				}
 				err := newServerRoute.route.GetError()
