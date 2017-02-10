@@ -716,7 +716,8 @@ func (server *Server) loadConfig(configurations configs, globalConfiguration Glo
 
 						// TODO make this configurable
 						var negroni = negroni.New()
-						probe, err := middlewares.NewProbe(fmt.Sprintf("/tmp/probe-%s", frontend.Backend), true)
+						probeConfig := middlewares.ProbeConfig{LogFile: fmt.Sprintf("/tmp/probe-%s", frontend.Backend), Truncate: true}
+						probe, err := middlewares.NewProbe(probeConfig)
 						if err == nil {
 							negroni.Use(probe)
 						}
