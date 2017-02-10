@@ -1,4 +1,4 @@
-package middlewares
+package audittap
 
 import (
 	"net/http/httptest"
@@ -45,9 +45,11 @@ func TestAuditResponseWriter_headers(t *testing.T) {
 	w.Header().Add("Cookie", "a=1")
 	w.Header().Add("Cookie", "b=2")
 
-	assert.Equal(t, map[string]interface{}{
-		"contentLength": "123",
-		"requestId":     "abc123",
-		"cookie":        []string{"a=1", "b=2"},
-	}, w.Summarise().Header)
+	assert.Equal(t,
+		map[string]interface{}{
+			"contentLength": "123",
+			"requestId":     "abc123",
+			"cookie":        []string{"a=1", "b=2"},
+		},
+		w.Summarise().Header)
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/containous/traefik/healthcheck"
 	"github.com/containous/traefik/log"
 	"github.com/containous/traefik/middlewares"
+	"github.com/containous/traefik/middlewares/audittap"
 	"github.com/containous/traefik/provider"
 	"github.com/containous/traefik/safe"
 	"github.com/containous/traefik/types"
@@ -36,7 +37,6 @@ import (
 	"github.com/vulcand/oxy/forward"
 	"github.com/vulcand/oxy/roundrobin"
 	"github.com/vulcand/oxy/utils"
-	"fmt"
 )
 
 var oxyLogger = &OxyLogger{}
@@ -116,7 +116,7 @@ func (server *Server) Wait() {
 // Stop stops the server
 func (server *Server) Stop() {
 	for serverEntryPointName, serverEntryPoint := range server.serverEntryPoints {
-		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(server.globalConfiguration.GraceTimeOut)*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(server.globalConfiguration.GraceTimeOut) * time.Second)
 		go func() {
 			log.Debugf("Waiting %d seconds before killing connections on entrypoint %s...", 30, serverEntryPointName)
 			serverEntryPoint.httpServer.BlockingClose()
@@ -129,7 +129,7 @@ func (server *Server) Stop() {
 
 // Close destroys the server
 func (server *Server) Close() {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(server.globalConfiguration.GraceTimeOut)*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(server.globalConfiguration.GraceTimeOut) * time.Second)
 	go func(ctx context.Context) {
 		<-ctx.Done()
 		if ctx.Err() == context.Canceled {
@@ -277,7 +277,7 @@ func (server *Server) listenConfigurations(stop chan bool) {
 			}
 			currentConfigurations := server.currentConfigurations.Get().(configs)
 
-			// Copy configurations to new map so we don't change current if LoadConfig fails
+		// Copy configurations to new map so we don't change current if LoadConfig fails
 			newConfigurations := make(configs)
 			for k, v := range currentConfigurations {
 				newConfigurations[k] = v
@@ -562,7 +562,7 @@ func (server *Server) loadConfig(configurations configs, globalConfiguration Glo
 	backend2FrontendMap := map[string]string{}
 	for _, configuration := range configurations {
 		frontendNames := sortedFrontendNamesForConfig(configuration)
-	frontend:
+		frontend:
 		for _, frontendName := range frontendNames {
 			frontend := configuration.Frontends[frontendName]
 
@@ -716,8 +716,8 @@ func (server *Server) loadConfig(configurations configs, globalConfiguration Glo
 
 						// TODO make this configurable
 						var negroni = negroni.New()
-						probeConfig := middlewares.ProbeConfig{LogFile: fmt.Sprintf("/tmp/probe-%s", frontend.Backend), Truncate: true}
-						probe, err := middlewares.NewProbe(probeConfig)
+						probeConfig := audittap.AuditTapConfig{LogFile: "./probe", Truncate: true}
+						probe, err := audittap.NewAuditTap(probeConfig, frontend.Backend)
 						if err == nil {
 							negroni.Use(probe)
 						}

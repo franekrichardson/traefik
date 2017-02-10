@@ -42,6 +42,12 @@ type HealthCheck struct {
 	URL string `json:"url,omitempty"`
 }
 
+// AuditTap holds AuditTap configuration
+type AuditTap struct {
+	Endpoint string `json:"endpoint,omitempty"`
+	Topic    string `json:"topic,omitempty"`
+}
+
 // Server holds server configuration.
 type Server struct {
 	URL    string `json:"url,omitempty"`
@@ -60,7 +66,7 @@ type Frontend struct {
 	Routes         map[string]Route `json:"routes,omitempty"`
 	PassHostHeader bool             `json:"passHostHeader,omitempty"`
 	Priority       int              `json:"priority"`
-	RequestHeader  bool		`json:"requestHeader,omitempty"`
+	RequestHeader  bool             `json:"requestHeader,omitempty"`
 }
 
 // LoadBalancerMethod holds the method of load balancing to use.
@@ -107,11 +113,11 @@ type ConfigMessage struct {
 
 // Constraint hold a parsed constraint expresssion
 type Constraint struct {
-	Key string
+	Key       string
 	// MustMatch is true if operator is "==" or false if operator is "!="
 	MustMatch bool
 	// TODO: support regex
-	Regex string
+	Regex     string
 }
 
 // NewConstraint receive a string and return a *Constraint, after checking syntax and parsing the constraint expression
@@ -202,10 +208,14 @@ func (cs *Constraints) Set(str string) error {
 type Constraints []*Constraint
 
 //Get []*Constraint
-func (cs *Constraints) Get() interface{} { return []*Constraint(*cs) }
+func (cs *Constraints) Get() interface{} {
+	return []*Constraint(*cs)
+}
 
 //String returns []*Constraint in string
-func (cs *Constraints) String() string { return fmt.Sprintf("%+v", *cs) }
+func (cs *Constraints) String() string {
+	return fmt.Sprintf("%+v", *cs)
+}
 
 //SetValue sets []*Constraint into the parser
 func (cs *Constraints) SetValue(val interface{}) {
@@ -291,10 +301,14 @@ func (b *Buckets) Set(str string) error {
 }
 
 //Get []float64
-func (b *Buckets) Get() interface{} { return Buckets(*b) }
+func (b *Buckets) Get() interface{} {
+	return Buckets(*b)
+}
 
 //String return slice in a string
-func (b *Buckets) String() string { return fmt.Sprintf("%v", *b) }
+func (b *Buckets) String() string {
+	return fmt.Sprintf("%v", *b)
+}
 
 //SetValue sets []float64 into the parser
 func (b *Buckets) SetValue(val interface{}) {
