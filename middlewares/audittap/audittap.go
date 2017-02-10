@@ -1,6 +1,7 @@
 package audittap
 
 import (
+	"github.com/containous/traefik/types"
 	"net/http"
 	"time"
 )
@@ -8,13 +9,17 @@ import (
 //-------------------------------------------------------------------------------------------------
 
 type RequestSummary struct {
-	Method  string                 `json:"method"`
-	Path    string                 `json:"path"`
-	Header  map[string]interface{} `json:"header"` // contains strings or string slices
-	BeganAt time.Time              `json:"beganAt"`
+	Source    string                 `json:"auditSource,omitempty"`
+	AuditType string                 `json:"auditType,omitempty"`
+	Method    string                 `json:"method"`
+	Path      string                 `json:"path"`
+	Header    map[string]interface{} `json:"header"` // contains strings or string slices
+	BeganAt   time.Time              `json:"beganAt"`
 }
 
 type ResponseSummary struct {
+	Source      string                 `json:"auditSource,omitempty"`
+	AuditType   string                 `json:"auditType,omitempty"`
 	Status      int                    `json:"status"`
 	Header      map[string]interface{} `json:"header"` // contains strings or string slices
 	Size        int                    `json:"size"`
@@ -38,17 +43,19 @@ type AuditSink interface {
 //-------------------------------------------------------------------------------------------------
 
 type AuditTapConfig struct {
-	LogFile  string
-	Truncate bool
-	Endpoint string
-	Method   string
-	Topic    string
+	SizeThreshold string // split bodies greater than this (units are allowed)
+	LogFile       string
+	Truncate      bool
+	Endpoint      string
+	Method        string
+	Topic         string
 }
 
 // AuditTap writes a summary of each request to the audit sink
 type AuditTap struct {
-	AuditSink AuditSink
-	Backend   string
+	AuditSink     AuditSink
+	Backend       string
+	SizeThreshold int64
 }
 
 // NewAuditTap returns a new AuditTap handler.
@@ -57,7 +64,16 @@ func NewAuditTap(config AuditTapConfig, backend string) (*AuditTap, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &AuditTap{sink, backend}, nil
+
+	var th int64 = 1000000
+	if config.SizeThreshold != "" {
+		th, _, err = types.AsSI(config.SizeThreshold)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &AuditTap{sink, backend, th}, nil
 }
 
 func selectSink(config AuditTapConfig, backend string) (AuditSink, error) {
@@ -80,10 +96,12 @@ func selectSink(config AuditTapConfig, backend string) (AuditSink, error) {
 
 func (s *AuditTap) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	req := RequestSummary{
-		Method:  r.Method,
-		Path:    r.URL.String(),
-		Header:  flattenHeaders(r.Header),
-		BeganAt: clock.Now(),
+		Source:    s.Backend,
+		AuditType: "RequestReceived",
+		Method:    r.Method,
+		Path:      r.URL.String(),
+		Header:    flattenHeaders(r.Header),
+		BeganAt:   clock.Now(),
 	}
 	ww := NewAuditResponseWriter(rw)
 	next.ServeHTTP(ww, r)

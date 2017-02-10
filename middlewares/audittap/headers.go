@@ -30,15 +30,34 @@ func flattenKey(key string) string {
 	return b.String()
 }
 
+func expandCookies(existing interface{}, v []string) []string {
+	var all []string
+	if existing != nil {
+		all = existing.([]string)
+	}
+	for _, s := range v {
+		cookies := strings.Split(s, ";")
+		for _, c := range cookies {
+			all = append(all, strings.TrimSpace(c))
+		}
+	}
+	return all
+}
+
 func flattenHeaders(hdr http.Header) map[string]interface{} {
 	flat := make(map[string]interface{})
 	for k, v := range hdr {
 		if !isHopByHopHeader(k) {
 			f := flattenKey(k)
-			if len(v) == 1 {
-				flat[f] = v[0]
+			if f == "cookie" {
+				flat[f] = expandCookies(flat[f], v)
+
 			} else {
-				flat[f] = v
+				if len(v) == 1 {
+					flat[f] = v[0]
+				} else {
+					flat[f] = v
+				}
 			}
 		}
 	}

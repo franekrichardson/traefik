@@ -24,11 +24,17 @@ func (fs *noopAuditSink) Audit(summary Summary) error {
 
 //-------------------------------------------------------------------------------------------------
 
+var opener = []byte{'['}
+var closer = []byte{']', '\n'}
+var commaNewline = []byte{',', '\n'}
+var newline = []byte{'\n'}
+
 type fileAuditSink struct {
-	w io.WriteCloser
+	w       io.WriteCloser
+	lineEnd []byte
 }
 
-var _ AuditSink = &fileAuditSink{nil} // prove type conformance
+var _ AuditSink = &fileAuditSink{nil, nil} // prove type conformance
 
 func NewFileAuditSink(file, backend string, truncate bool) (*fileAuditSink, error) {
 	flag := os.O_RDWR | os.O_CREATE
@@ -40,7 +46,8 @@ func NewFileAuditSink(file, backend string, truncate bool) (*fileAuditSink, erro
 	if err != nil {
 		return nil, err
 	}
-	return &fileAuditSink{f}, nil
+	f.Write(opener)
+	return &fileAuditSink{f, newline}, nil
 }
 
 func determineFilename(file, backend string) string {
@@ -56,20 +63,21 @@ func determineFilename(file, backend string) string {
 	return name
 }
 
-var newline = []byte{'\n'}
-
 func (fs *fileAuditSink) Audit(summary Summary) error {
 	enc := summary.ToJson()
 	if enc.Err != nil {
 		return enc.Err
 	}
+	fs.w.Write(fs.lineEnd)
 	_, err := fs.w.Write(enc.Bytes)
-	fs.w.Write(newline)
+	fs.lineEnd = commaNewline
 	return err
 }
 
 func (fs *fileAuditSink) Close() error {
-	return fs.Close()
+	fs.w.Write(newline)
+	fs.w.Write(closer)
+	return fs.w.Close()
 }
 
 //-------------------------------------------------------------------------------------------------

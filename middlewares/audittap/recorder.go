@@ -53,6 +53,7 @@ func (r *recorderResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 
 func (r *recorderResponseWriter) Summarise() ResponseSummary {
 	return ResponseSummary{
+		"", "",
 		r.status,
 		flattenHeaders(r.Header()),
 		r.size,

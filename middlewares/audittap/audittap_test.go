@@ -31,12 +31,15 @@ func TestAuditTap_noop(t *testing.T) {
 	assert.Equal(t,
 		Summary{
 			RequestSummary{
+				"backend1",
+				"RequestReceived",
 				"GET",
 				"localhost:9092",
 				map[string]interface{}{"foo": "123"},
 				clock.Now(),
 			},
 			ResponseSummary{
+				"", "",
 				404,
 				map[string]interface{}{"xContentTypeOptions": "nosniff", "contentType": "text/plain; charset=utf-8"},
 				19,

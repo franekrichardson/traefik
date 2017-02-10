@@ -42,14 +42,14 @@ func TestAuditResponseWriter_headers(t *testing.T) {
 	// other headers should be retainedd
 	w.Header().Set("Content-Length", "123")
 	w.Header().Set("Request-ID", "abc123")
-	w.Header().Add("Cookie", "a=1")
-	w.Header().Add("Cookie", "b=2")
+	w.Header().Add("Cookie", "a=1; b=2")
+	w.Header().Add("Cookie", "c=3")
 
 	assert.Equal(t,
 		map[string]interface{}{
 			"contentLength": "123",
 			"requestId":     "abc123",
-			"cookie":        []string{"a=1", "b=2"},
+			"cookie":        []string{"a=1", "b=2", "c=3"},
 		},
 		w.Summarise().Header)
 }
