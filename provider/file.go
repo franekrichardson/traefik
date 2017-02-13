@@ -5,13 +5,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"fmt"
 	"github.com/BurntSushi/toml"
 	"github.com/containous/traefik/log"
 	"github.com/containous/traefik/safe"
 	"github.com/containous/traefik/types"
 	"gopkg.in/fsnotify.v1"
 	"io/ioutil"
-	"fmt"
 	"path"
 	"time"
 )
@@ -21,7 +21,7 @@ var _ Provider = (*File)(nil)
 // File holds configurations of the File provider.
 type File struct {
 	BaseProvider `mapstructure:",squash"`
-	Directory string `description:"Read config from files on this directory"`
+	Directory    string `description:"Read config from files on this directory"`
 }
 
 // Provide allows the provider to provide configurations to traefik
@@ -91,7 +91,7 @@ func (provider *File) handleSingleFile(configurationChan chan<- types.ConfigMess
 
 func debounce(interval time.Duration, watcher *fsnotify.Watcher, stop chan bool, f func(arg fsnotify.Event)) {
 	var (
-		event fsnotify.Event
+		event    fsnotify.Event
 		eventptr *fsnotify.Event
 	)
 
@@ -104,7 +104,7 @@ func debounce(interval time.Duration, watcher *fsnotify.Watcher, stop chan bool,
 				f(event)
 				eventptr = nil
 			}
-		case <- stop:
+		case <-stop:
 			return
 		case err := <-watcher.Errors:
 			log.Error("Watcher event error", err)
@@ -153,7 +153,7 @@ func (provider *File) loadFileConfigFromDir(configurationChan chan<- types.Confi
 	configuration.Backends = make(map[string]*types.Backend)
 
 	for _, file := range files {
-		if(! strings.HasSuffix(file.Name(), ".toml")) {
+		if !strings.HasSuffix(file.Name(), ".toml") {
 			continue
 		}
 
@@ -174,7 +174,6 @@ func (provider *File) loadFileConfigFromDir(configurationChan chan<- types.Confi
 	}
 
 	return nil
-
 }
 
 func (provider *File) loadFileConfig(filename string) *types.Configuration {
