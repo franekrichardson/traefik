@@ -9,12 +9,15 @@ import (
 //-------------------------------------------------------------------------------------------------
 
 type RequestSummary struct {
-	Source    string                 `json:"auditSource,omitempty"`
-	AuditType string                 `json:"auditType,omitempty"`
-	Method    string                 `json:"method"`
-	Path      string                 `json:"path"`
-	Header    map[string]interface{} `json:"header"` // contains strings or string slices
-	BeganAt   time.Time              `json:"beganAt"`
+	Source     string                 `json:"auditSource,omitempty"`
+	AuditType  string                 `json:"auditType,omitempty"`
+	Host       string                 `json:"host"`
+	Method     string                 `json:"method"`
+	Path       string                 `json:"path"`
+	Query      string                 `json:"query"`
+	RemoteAddr string                 `json:"remoteAddr"`
+	Header     map[string]interface{} `json:"header"` // contains strings or string slices
+	BeganAt    time.Time              `json:"beganAt"`
 }
 
 type ResponseSummary struct {
@@ -40,6 +43,8 @@ type AuditSink interface {
 	Audit(summary Summary) error
 }
 
+type Renderer func(Summary) Encoded
+
 //-------------------------------------------------------------------------------------------------
 
 type AuditTapConfig struct {
@@ -51,7 +56,7 @@ type AuditTapConfig struct {
 	Topic         string
 }
 
-// AuditTap writes a summary of each request to the audit sink
+// AuditTap writes a enc of each request to the audit sink
 type AuditTap struct {
 	AuditSink     AuditSink
 	Backend       string
@@ -96,14 +101,18 @@ func selectSink(config AuditTapConfig, backend string) (AuditSink, error) {
 
 func (s *AuditTap) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	req := RequestSummary{
-		Source:    s.Backend,
-		AuditType: "RequestReceived",
-		Method:    r.Method,
-		Path:      r.URL.String(),
-		Header:    flattenHeaders(r.Header),
-		BeganAt:   clock.Now(),
+		Source:     s.Backend,
+		AuditType:  "RequestReceived",
+		Host:       r.Host,
+		Method:     r.Method,
+		Path:       r.URL.Path,
+		Query:      r.URL.RawQuery,
+		RemoteAddr: r.RemoteAddr,
+		Header:     flattenHeaders(r.Header),
+		BeganAt:    clock.Now(),
 	}
 	ww := NewAuditResponseWriter(rw)
 	next.ServeHTTP(ww, r)
-	s.AuditSink.Audit(Summary{req, ww.Summarise()})
+	summary := Summary{req, ww.Summarise()}
+	s.AuditSink.Audit(summary)
 }

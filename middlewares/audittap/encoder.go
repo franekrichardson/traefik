@@ -8,10 +8,26 @@ import (
 const formatString = "2006-01-02T15:04:05"
 const blankString = "                   "
 
+// See https://godoc.org/github.com/Shopify/sarama#Encoder
+type Encoder interface {
+	Encode() ([]byte, error)
+	Length() int
+}
+
 type Encoded struct {
 	Bytes []byte
 	Err   error
 }
+
+func (enc Encoded) Encode() ([]byte, error) {
+	return enc.Bytes, enc.Err
+}
+
+func (enc Encoded) Length() int {
+	return len(enc.Bytes)
+}
+
+//-------------------------------------------------------------------------------------------------
 
 func (summary Summary) ToString() Encoded {
 	s := fmt.Sprintf("%s %6s %s %d %d\n%s %+v\n%s %+v\n",
@@ -27,10 +43,6 @@ func (summary Summary) ToJson() Encoded {
 	return Encoded{b, err}
 }
 
-func (summary Encoded) Encode() ([]byte, error) {
-	return summary.Bytes, summary.Err
-}
-
-func (summary Encoded) Length() int {
-	return len(summary.Bytes)
+func InternalRenderer(summary Summary) Encoded {
+	return summary.ToJson()
 }

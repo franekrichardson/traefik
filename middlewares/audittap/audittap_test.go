@@ -21,8 +21,11 @@ func TestAuditTap_noop(t *testing.T) {
 	tap, err := NewAuditTap(cfg, "backend1")
 	assert.NoError(t, err)
 
-	req := httptest.NewRequest("", "localhost:9092", nil)
-	req.Header.Set("Foo", "123")
+	req := httptest.NewRequest("", "/a/b/c?d=1&e=2", nil)
+	req.RemoteAddr = "101.102.103.104:1234"
+	req.Host = "example.co.uk"
+	req.Header.Set("Request-ID", "R123")
+	req.Header.Set("Session-ID", "S123")
 	res := httptest.NewRecorder()
 
 	tap.ServeHTTP(res, req, http.NotFoundHandler().(http.HandlerFunc))
@@ -33,9 +36,12 @@ func TestAuditTap_noop(t *testing.T) {
 			RequestSummary{
 				"backend1",
 				"RequestReceived",
+				"example.co.uk",
 				"GET",
-				"localhost:9092",
-				map[string]interface{}{"foo": "123"},
+				"/a/b/c",
+				"d=1&e=2",
+				"101.102.103.104:1234",
+				map[string]interface{}{"requestId": "R123", "sessionId": "S123"},
 				clock.Now(),
 			},
 			ResponseSummary{

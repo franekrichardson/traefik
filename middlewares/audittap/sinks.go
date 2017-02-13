@@ -11,6 +11,12 @@ import (
 	"strings"
 )
 
+var render Renderer = HmrcRenderer
+
+//var render Renderer = InternalRenderer
+
+//-------------------------------------------------------------------------------------------------
+
 type noopAuditSink struct {
 	Summary
 }
@@ -64,7 +70,7 @@ func determineFilename(file, backend string) string {
 }
 
 func (fs *fileAuditSink) Audit(summary Summary) error {
-	enc := summary.ToJson()
+	enc := render(summary)
 	if enc.Err != nil {
 		return enc.Err
 	}
@@ -102,7 +108,7 @@ func NewHttpAuditSink(method, endpoint, backend string) (sink *httpAuditSink, er
 }
 
 func (fs *httpAuditSink) Audit(summary Summary) error {
-	enc := summary.ToJson()
+	enc := render(summary)
 	if enc.Err != nil {
 		return enc.Err
 	}
