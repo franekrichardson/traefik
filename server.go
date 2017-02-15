@@ -549,6 +549,7 @@ func (server *Server) buildEntryPoints(globalConfiguration GlobalConfiguration) 
 	return serverEntryPoints
 }
 
+// TODO server middleware needs a shutdown loop that calls Close() on io.Closer middlewares
 // LoadConfig returns a new gorilla.mux Route from the specified global configuration and the dynamic
 // provider configurations.
 func (server *Server) loadConfig(configurations configs, globalConfiguration GlobalConfiguration) (map[string]*serverEntryPoint, error) {
