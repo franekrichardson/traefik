@@ -1,5 +1,5 @@
-hash: 432955194201783f7111fd5339e96e92703ac482ed81bc5cf8cf46b6e7decb64
-updated: 2017-02-10T14:32:54.854324917Z
+hash: 3609c49c4add21bf8af3d27cff79e86f5735753d3fafc1499a07d27ddeb331a2
+updated: 2017-02-14T10:48:15.582208643Z
 imports:
 - name: bitbucket.org/ww/goautoneg
   version: 75cd24fc2f2c2a2088577d12123ddee5f54e0675
@@ -240,6 +240,12 @@ imports:
   version: fd1de70867126402be23c306e1ce32828455d85b
 - name: github.com/eapache/channels
   version: 47238d5aae8c0fefd518ef2bee46290909cf8263
+- name: github.com/eapache/go-resiliency
+  version: b86b1ec0dd4209a588dc1285cdd471e73525c0b3
+  subpackages:
+  - breaker
+- name: github.com/eapache/go-xerial-snappy
+  version: bb955e01b9346ac19dc29eb16586c90ded99a98c
 - name: github.com/eapache/queue
   version: 44cc805cf13205b55f69e14bcb69867d1ae92f98
 - name: github.com/edeckers/auroradnsclient
@@ -288,6 +294,8 @@ imports:
   version: 5677a0e3d5e89854c9974e1256839ee23f8233ca
   subpackages:
   - proto
+- name: github.com/golang/snappy
+  version: 7db9049039a047d955fe8c19b83c8ff5abd765c7
 - name: github.com/google/go-github
   version: c8ebe3a4d7f0791a6315b7410353d4084c58805d
   subpackages:
@@ -327,6 +335,8 @@ imports:
   version: 72f9bd7c4e0c2a40055ab3d0f09654f730cce982
 - name: github.com/juju/ratelimit
   version: 77ed1c8a01217656d2080ad51981f6e99adaa177
+- name: github.com/klauspost/crc32
+  version: 1bab8b35b6bb565f92cbc97939610af9369f942a
 - name: github.com/mailgun/manners
   version: a585afd9d65c0e05f6c003f921e71ebc05074f4f
 - name: github.com/mailgun/timetools
@@ -390,6 +400,12 @@ imports:
   - ovh
 - name: github.com/pborman/uuid
   version: 5007efa264d92316c43112bc573e754bc889b7b1
+- name: github.com/pierrec/lz4
+  version: 5c9560bfa9ace2bf86080bf40d46b34ae44604df
+- name: github.com/pierrec/xxHash
+  version: 5a004441f897722c627870a981d02b29924215fa
+  subpackages:
+  - xxHash32
 - name: github.com/pkg/errors
   version: 248dadf4e9068a0b3e79f02ed0a610d935de5302
 - name: github.com/pmezard/go-difflib
@@ -424,6 +440,8 @@ imports:
   version: 2c43ff300f3eafcbd7d0b89b10427fc630efdc1e
   subpackages:
   - client
+- name: github.com/rcrowley/go-metrics
+  version: 1f30fe9094a513ce4c700b9a54458bbb0c96996c
 - name: github.com/ryanuber/go-glob
   version: 572520ed46dbddaed19ea3d9541bdd0494163693
 - name: github.com/samuel/go-zookeeper
@@ -432,6 +450,8 @@ imports:
   - zk
 - name: github.com/satori/go.uuid
   version: 879c5887cd475cd7864858769793b2ceb0d44feb
+- name: github.com/Shopify/sarama
+  version: 0fb560e5f7fbcaee2f75e3c34174320709f69944
 - name: github.com/Sirupsen/logrus
   version: a283a10442df8dc09befd873fab202bf8a253d6a
 - name: github.com/spf13/pflag

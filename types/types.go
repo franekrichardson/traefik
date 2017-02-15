@@ -18,6 +18,7 @@ type Backend struct {
 	LoadBalancer   *LoadBalancer     `json:"loadBalancer,omitempty"`
 	MaxConn        *MaxConn          `json:"maxConn,omitempty"`
 	HealthCheck    *HealthCheck      `json:"healthCheck,omitempty"`
+	AuditTap       *AuditTap         `json:"auditTap,omitempty"`
 }
 
 // MaxConn holds maximum connection configuration
@@ -45,7 +46,9 @@ type HealthCheck struct {
 // AuditTap holds AuditTap configuration
 type AuditTap struct {
 	Endpoint string `json:"endpoint,omitempty"`
+	Method   string `json:"method,omitempty"`
 	Topic    string `json:"topic,omitempty"`
+	LogFile  string `json:"logFile,omitempty"`
 }
 
 // Server holds server configuration.

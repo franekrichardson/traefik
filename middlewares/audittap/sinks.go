@@ -3,8 +3,10 @@ package audittap
 import (
 	"bytes"
 	"fmt"
+	"github.com/Shopify/sarama"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -42,9 +44,11 @@ type fileAuditSink struct {
 
 var _ AuditSink = &fileAuditSink{nil, nil} // prove type conformance
 
-func NewFileAuditSink(file, backend string, truncate bool) (*fileAuditSink, error) {
+func NewFileAuditSink(file, backend string) (*fileAuditSink, error) {
 	flag := os.O_RDWR | os.O_CREATE
-	if truncate {
+	if strings.HasPrefix(file, ">>") {
+		file = strings.TrimSpace(file[2:])
+	} else {
 		flag |= os.O_TRUNC
 	}
 	name := determineFilename(file, backend)
@@ -94,7 +98,7 @@ type httpAuditSink struct {
 
 var _ AuditSink = &httpAuditSink{} // prove type conformance
 
-func NewHttpAuditSink(method, endpoint, backend string) (sink *httpAuditSink, err error) {
+func NewHttpAuditSink(method, endpoint string) (sink *httpAuditSink, err error) {
 	if method == "" {
 		method = http.MethodPost
 	}
@@ -117,4 +121,40 @@ func (fs *httpAuditSink) Audit(summary Summary) error {
 	res, err := http.DefaultClient.Do(&request)
 	res.Body.Close()
 	return err
+}
+
+//-------------------------------------------------------------------------------------------------
+
+type kafkaAuditSink struct {
+	topic    string
+	producer sarama.AsyncProducer
+}
+
+var _ AuditSink = &kafkaAuditSink{} // prove type conformance
+
+func NewKafkaAuditSink(topic, endpoint string) (sink *kafkaAuditSink, err error) {
+	config := sarama.NewConfig()
+	config.Producer.Return.Successes = false
+	producer, err := sarama.NewAsyncProducer([]string{endpoint}, config)
+	if err != nil {
+		panic(err)
+	}
+
+	go func() {
+		for err := range producer.Errors() {
+			log.Printf("Kafka: %v", err)
+		}
+	}()
+
+	return &kafkaAuditSink{topic, producer}, nil
+}
+
+func (fs *kafkaAuditSink) Audit(summary Summary) error {
+	enc := render(summary)
+	if enc.Err != nil {
+		return enc.Err
+	}
+	message := &sarama.ProducerMessage{Topic: fs.topic, Value: enc}
+	fs.producer.Input() <- message
+	return nil
 }

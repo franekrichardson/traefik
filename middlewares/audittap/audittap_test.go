@@ -30,12 +30,12 @@ func TestAuditTap_noop(t *testing.T) {
 
 	tap.ServeHTTP(res, req, http.NotFoundHandler().(http.HandlerFunc))
 
-	sink := tap.AuditSink.(*noopAuditSink)
+	sink := tap.AuditSinks[0].(*noopAuditSink)
 	assert.Equal(t,
 		Summary{
 			RequestSummary{
 				"backend1",
-				"RequestReceived",
+				"Traefik1",
 				"example.co.uk",
 				"GET",
 				"/a/b/c",

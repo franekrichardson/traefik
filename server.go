@@ -716,7 +716,8 @@ func (server *Server) loadConfig(configurations configs, globalConfiguration Glo
 
 						// TODO make this configurable
 						var negroni = negroni.New()
-						probeConfig := audittap.AuditTapConfig{LogFile: "./probe", Truncate: true}
+						probeConfig := audittap.AuditTapConfig{Endpoint: "localhost:9092", Topic: "splunk"}
+						//probeConfig := audittap.AuditTapConfig{LogFile: "./probe", Truncate: true}
 						probe, err := audittap.NewAuditTap(probeConfig, frontend.Backend)
 						if err == nil {
 							negroni.Use(probe)

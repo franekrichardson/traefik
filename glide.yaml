@@ -140,3 +140,5 @@ import:
   version: 2c43ff300f3eafcbd7d0b89b10427fc630efdc1e
 - package: github.com/google/uuid
   version: ^0.2.0
+- package: github.com/Shopify/sarama
+  version: ^1.11.0

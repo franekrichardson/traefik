@@ -11,7 +11,7 @@ import (
 const tmpFile = "/tmp/testFileSink"
 
 func TestFileSink1(t *testing.T) {
-	w, err := NewFileAuditSink(tmpFile, "foo", true)
+	w, err := NewFileAuditSink(tmpFile, "foo")
 	assert.NoError(t, err)
 
 	summary := Summary{}

@@ -48,24 +48,28 @@ type Renderer func(Summary) Encoded
 //-------------------------------------------------------------------------------------------------
 
 type AuditTapConfig struct {
-	SizeThreshold string // split bodies greater than this (units are allowed)
-	LogFile       string
-	Truncate      bool
-	Endpoint      string
-	Method        string
-	Topic         string
+	// split bodies greater than this (units are allowed)
+	SizeThreshold string
+	// write audit items to this file (optional)
+	LogFile string
+	// HTTP or Kafka endpoint
+	Endpoint string
+	// HTTP method for REST (default: "GET")
+	Method string
+	// Topic for Kafka (if provided, Kafka replaces REST)
+	Topic string
 }
 
 // AuditTap writes a enc of each request to the audit sink
 type AuditTap struct {
-	AuditSink     AuditSink
+	AuditSinks    []AuditSink
 	Backend       string
 	SizeThreshold int64
 }
 
 // NewAuditTap returns a new AuditTap handler.
 func NewAuditTap(config AuditTapConfig, backend string) (*AuditTap, error) {
-	sink, err := selectSink(config, backend)
+	sinks, err := selectSinks(config, backend)
 	if err != nil {
 		return nil, err
 	}
@@ -78,31 +82,47 @@ func NewAuditTap(config AuditTapConfig, backend string) (*AuditTap, error) {
 		}
 	}
 
-	return &AuditTap{sink, backend, th}, nil
+	return &AuditTap{sinks, backend, th}, nil
 }
 
-func selectSink(config AuditTapConfig, backend string) (AuditSink, error) {
-	if config.LogFile != "" {
-		fs, err := NewFileAuditSink(config.LogFile, backend, config.Truncate)
-		return fs, err
-	}
+func selectSinks(config AuditTapConfig, backend string) ([]AuditSink, error) {
+	var sinks []AuditSink
 
-	if config.Topic != "" {
-		//TODO
+	if config.LogFile != "" {
+		fas, err := NewFileAuditSink(config.LogFile, backend)
+		if err != nil {
+			return nil, err
+		}
+		sinks = append(sinks, fas)
 	}
 
 	if config.Endpoint != "" {
-		fs, err := NewHttpAuditSink(config.Method, config.Endpoint, backend)
-		return fs, err
+		if config.Topic != "" {
+			kas, err := NewKafkaAuditSink(config.Topic, config.Endpoint)
+			if err != nil {
+				return nil, err
+			}
+			sinks = append(sinks, kas)
+		} else {
+			has, err := NewHttpAuditSink(config.Method, config.Endpoint)
+			if err != nil {
+				return nil, err
+			}
+			sinks = append(sinks, has)
+		}
 	}
 
-	return &noopAuditSink{}, nil
+	if sinks == nil {
+		sinks = append(sinks, &noopAuditSink{})
+	}
+
+	return sinks, nil
 }
 
 func (s *AuditTap) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.HandlerFunc) {
 	req := RequestSummary{
 		Source:     s.Backend,
-		AuditType:  "RequestReceived",
+		AuditType:  "Traefik1",
 		Host:       r.Host,
 		Method:     r.Method,
 		Path:       r.URL.Path,
@@ -111,8 +131,12 @@ func (s *AuditTap) ServeHTTP(rw http.ResponseWriter, r *http.Request, next http.
 		Header:     flattenHeaders(r.Header),
 		BeganAt:    clock.Now(),
 	}
+
 	ww := NewAuditResponseWriter(rw)
 	next.ServeHTTP(ww, r)
+
 	summary := Summary{req, ww.Summarise()}
-	s.AuditSink.Audit(summary)
+	for _, sink := range s.AuditSinks {
+		sink.Audit(summary)
+	}
 }
