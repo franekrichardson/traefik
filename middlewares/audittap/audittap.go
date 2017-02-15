@@ -47,19 +47,6 @@ type Renderer func(Summary) Encoded
 
 //-------------------------------------------------------------------------------------------------
 
-type AuditTapConfig struct {
-	// split bodies greater than this (units are allowed)
-	SizeThreshold string
-	// write audit items to this file (optional)
-	LogFile string
-	// HTTP or Kafka endpoint
-	Endpoint string
-	// HTTP method for REST (default: "GET")
-	Method string
-	// Topic for Kafka (if provided, Kafka replaces REST)
-	Topic string
-}
-
 // AuditTap writes a enc of each request to the audit sink
 type AuditTap struct {
 	AuditSinks    []AuditSink
@@ -68,8 +55,13 @@ type AuditTap struct {
 }
 
 // NewAuditTap returns a new AuditTap handler.
-func NewAuditTap(config AuditTapConfig, backend string) (*AuditTap, error) {
-	sinks, err := selectSinks(config, backend)
+func NewAuditTap(config *types.AuditTap, backend string) (*AuditTap, error) {
+	var renderer Renderer = InternalRenderer
+	if config.Format == "HMRC" {
+		renderer = HmrcRenderer
+	}
+
+	sinks, err := selectSinks(config, backend, renderer)
 	if err != nil {
 		return nil, err
 	}
@@ -85,11 +77,11 @@ func NewAuditTap(config AuditTapConfig, backend string) (*AuditTap, error) {
 	return &AuditTap{sinks, backend, th}, nil
 }
 
-func selectSinks(config AuditTapConfig, backend string) ([]AuditSink, error) {
+func selectSinks(config *types.AuditTap, backend string, renderer Renderer) ([]AuditSink, error) {
 	var sinks []AuditSink
 
 	if config.LogFile != "" {
-		fas, err := NewFileAuditSink(config.LogFile, backend)
+		fas, err := NewFileAuditSink(config.LogFile, backend, renderer)
 		if err != nil {
 			return nil, err
 		}
@@ -98,13 +90,13 @@ func selectSinks(config AuditTapConfig, backend string) ([]AuditSink, error) {
 
 	if config.Endpoint != "" {
 		if config.Topic != "" {
-			kas, err := NewKafkaAuditSink(config.Topic, config.Endpoint)
+			kas, err := NewKafkaAuditSink(config.Topic, config.Endpoint, renderer)
 			if err != nil {
 				return nil, err
 			}
 			sinks = append(sinks, kas)
 		} else {
-			has, err := NewHttpAuditSink(config.Method, config.Endpoint)
+			has, err := NewHttpAuditSink(config.Method, config.Endpoint, renderer)
 			if err != nil {
 				return nil, err
 			}

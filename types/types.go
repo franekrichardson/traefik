@@ -45,10 +45,18 @@ type HealthCheck struct {
 
 // AuditTap holds AuditTap configuration
 type AuditTap struct {
+	// HTTP or Kafka endpoint (only one of them is used)
 	Endpoint string `json:"endpoint,omitempty"`
-	Method   string `json:"method,omitempty"`
-	Topic    string `json:"topic,omitempty"`
-	LogFile  string `json:"logFile,omitempty"`
+	// HTTP method for REST (default: "GET")
+	Method string `json:"method,omitempty"`
+	// Topic for Kafka (if provided, Kafka replaces REST)
+	Topic string `json:"topic,omitempty"`
+	// write audit items to this file (optional)
+	LogFile string `json:"logFile,omitempty"`
+	// output rendering (optional)
+	Format string `json:"format,omitempty"`
+	// split bodies greater than this (units are allowed)
+	SizeThreshold string `json:"sizeThreshold,omitempty"`
 }
 
 // Server holds server configuration.
@@ -116,11 +124,11 @@ type ConfigMessage struct {
 
 // Constraint hold a parsed constraint expresssion
 type Constraint struct {
-	Key       string
+	Key string
 	// MustMatch is true if operator is "==" or false if operator is "!="
 	MustMatch bool
 	// TODO: support regex
-	Regex     string
+	Regex string
 }
 
 // NewConstraint receive a string and return a *Constraint, after checking syntax and parsing the constraint expression

@@ -1,6 +1,7 @@
 package audittap
 
 import (
+	"github.com/containous/traefik/types"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
@@ -17,7 +18,7 @@ func (c fixedClock) Now() time.Time {
 func TestAuditTap_noop(t *testing.T) {
 	clock = fixedClock(time.Now())
 
-	cfg := AuditTapConfig{}
+	cfg := &types.AuditTap{}
 	tap, err := NewAuditTap(cfg, "backend1")
 	assert.NoError(t, err)
 

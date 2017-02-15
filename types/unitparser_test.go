@@ -1,14 +1,14 @@
 package types
 
 import (
-	"testing"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestAsSI_happy(t *testing.T) {
-	cases := []struct{
+	cases := []struct {
 		in, unit string
-		exp int64
+		exp      int64
 	}{
 		{"1", "", 1},
 		{"1 km", "m", 1000},

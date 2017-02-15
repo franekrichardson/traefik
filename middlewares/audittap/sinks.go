@@ -4,18 +4,14 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/Shopify/sarama"
+	"github.com/containous/traefik/log"
 	"io"
-	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 )
-
-var render Renderer = HmrcRenderer
-
-//var render Renderer = InternalRenderer
 
 //-------------------------------------------------------------------------------------------------
 
@@ -40,11 +36,12 @@ var newline = []byte{'\n'}
 type fileAuditSink struct {
 	w       io.WriteCloser
 	lineEnd []byte
+	render  Renderer
 }
 
-var _ AuditSink = &fileAuditSink{nil, nil} // prove type conformance
+var _ AuditSink = &fileAuditSink{nil, nil, nil} // prove type conformance
 
-func NewFileAuditSink(file, backend string) (*fileAuditSink, error) {
+func NewFileAuditSink(file, backend string, renderer Renderer) (*fileAuditSink, error) {
 	flag := os.O_RDWR | os.O_CREATE
 	if strings.HasPrefix(file, ">>") {
 		file = strings.TrimSpace(file[2:])
@@ -57,7 +54,7 @@ func NewFileAuditSink(file, backend string) (*fileAuditSink, error) {
 		return nil, err
 	}
 	f.Write(opener)
-	return &fileAuditSink{f, newline}, nil
+	return &fileAuditSink{f, newline, renderer}, nil
 }
 
 func determineFilename(file, backend string) string {
@@ -73,54 +70,59 @@ func determineFilename(file, backend string) string {
 	return name
 }
 
-func (fs *fileAuditSink) Audit(summary Summary) error {
-	enc := render(summary)
+func (fas *fileAuditSink) Audit(summary Summary) error {
+	enc := fas.render(summary)
 	if enc.Err != nil {
 		return enc.Err
 	}
-	fs.w.Write(fs.lineEnd)
-	_, err := fs.w.Write(enc.Bytes)
-	fs.lineEnd = commaNewline
+	fas.w.Write(fas.lineEnd)
+	_, err := fas.w.Write(enc.Bytes)
+	fas.lineEnd = commaNewline
 	return err
 }
 
-func (fs *fileAuditSink) Close() error {
-	fs.w.Write(newline)
-	fs.w.Write(closer)
-	return fs.w.Close()
+func (fas *fileAuditSink) Close() error {
+	fas.w.Write(newline)
+	fas.w.Write(closer)
+	return fas.w.Close()
 }
 
 //-------------------------------------------------------------------------------------------------
 
 type httpAuditSink struct {
-	prototype http.Request
+	method, endpoint string
+	render           Renderer
 }
 
 var _ AuditSink = &httpAuditSink{} // prove type conformance
 
-func NewHttpAuditSink(method, endpoint string) (sink *httpAuditSink, err error) {
+func NewHttpAuditSink(method, endpoint string, renderer Renderer) (sink *httpAuditSink, err error) {
 	if method == "" {
 		method = http.MethodPost
 	}
-	prototype := http.Request{}
-	prototype.Method = method
-	prototype.URL, err = url.Parse(endpoint)
+	_, err = url.Parse(endpoint)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot access endpoint '%s': %v", endpoint, err)
 	}
-	return &httpAuditSink{prototype}, nil
+	return &httpAuditSink{method, endpoint, renderer}, nil
 }
 
-func (fs *httpAuditSink) Audit(summary Summary) error {
-	enc := render(summary)
+func (has *httpAuditSink) Audit(summary Summary) error {
+	enc := has.render(summary)
 	if enc.Err != nil {
 		return enc.Err
 	}
-	request := fs.prototype
-	request.Body = ioutil.NopCloser(bytes.NewBuffer(enc.Bytes))
-	res, err := http.DefaultClient.Do(&request)
-	res.Body.Close()
-	return err
+	request, err := http.NewRequest(has.method, has.endpoint, bytes.NewBuffer(enc.Bytes))
+	if err != nil {
+		return err
+	}
+	request.Header.Set("Content-Length", fmt.Sprintf("%d", enc.Length()))
+
+	res, err := http.DefaultClient.Do(request)
+	if err != nil {
+		return err
+	}
+	return res.Body.Close()
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -128,11 +130,13 @@ func (fs *httpAuditSink) Audit(summary Summary) error {
 type kafkaAuditSink struct {
 	topic    string
 	producer sarama.AsyncProducer
+	join     *sync.WaitGroup
+	render   Renderer
 }
 
 var _ AuditSink = &kafkaAuditSink{} // prove type conformance
 
-func NewKafkaAuditSink(topic, endpoint string) (sink *kafkaAuditSink, err error) {
+func NewKafkaAuditSink(topic, endpoint string, renderer Renderer) (sink *kafkaAuditSink, err error) {
 	config := sarama.NewConfig()
 	config.Producer.Return.Successes = false
 	producer, err := sarama.NewAsyncProducer([]string{endpoint}, config)
@@ -140,21 +144,32 @@ func NewKafkaAuditSink(topic, endpoint string) (sink *kafkaAuditSink, err error)
 		panic(err)
 	}
 
+	kas := &kafkaAuditSink{topic, producer, &sync.WaitGroup{}, renderer}
+	kas.join.Add(1)
+
 	go func() {
+		// read errors and log them, until the producer is closed
 		for err := range producer.Errors() {
-			log.Printf("Kafka: %v", err)
+			log.Errorf("Kafka: %v", err)
 		}
+		kas.join.Done()
 	}()
 
-	return &kafkaAuditSink{topic, producer}, nil
+	return kas, nil
 }
 
-func (fs *kafkaAuditSink) Audit(summary Summary) error {
-	enc := render(summary)
+func (kas *kafkaAuditSink) Audit(summary Summary) error {
+	enc := kas.render(summary)
 	if enc.Err != nil {
 		return enc.Err
 	}
-	message := &sarama.ProducerMessage{Topic: fs.topic, Value: enc}
-	fs.producer.Input() <- message
+	message := &sarama.ProducerMessage{Topic: kas.topic, Value: enc}
+	kas.producer.Input() <- message
+	return nil
+}
+
+func (kas *kafkaAuditSink) Close() error {
+	kas.producer.AsyncClose()
+	kas.join.Wait()
 	return nil
 }
