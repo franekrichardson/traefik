@@ -240,7 +240,7 @@ func (fblh *frontendBackendLoggingHandler) ServeHTTP(rw http.ResponseWriter, req
 	e.HttpTrueClientIp = req.Header.Get("True-Client-IP")
 	e.ProxyHost = infoRw.backend
 	e.RemoteUser = username
-	e.Request = fmt.Sprintf("%s %s %s", req.Method, req.RequestURI, req.Proto) 
+	e.Request = fmt.Sprintf("%s %s %s", req.Method, req.RequestURI, req.Proto)
 	e.RequestMethod = req.Method
 	e.RequestTime = strconv.FormatFloat(time.Since(startTime).Seconds(), 'f', 3, 64)
 	e.RequestLength = "-" //todo request length
